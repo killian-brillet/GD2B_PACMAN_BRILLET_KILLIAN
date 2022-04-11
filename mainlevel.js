@@ -1,6 +1,7 @@
 var fond;
 
 var map;
+var mapPath;
 
 var spritepacman;
 var spritefantome1;
@@ -15,10 +16,19 @@ var right;
 
 var player;
 var powerupon = false;
+var touched;
 
 var fantomeennemi1;
+var fantomeennemi2;
+var random;
+
 var pacgum;
 var powerup;
+
+var buttoneasy;
+var buttonnormal;
+var difficulty;
+var ennemycreated;
 
 class Level extends Phaser.Scene{
     constructor(){
@@ -32,10 +42,15 @@ class Level extends Phaser.Scene{
 
         this.load.image('pacman','assets/pacman.png');
         this.load.image('fantome', 'assets/fantome.png')
-        this.load.image('pacgum','assets/pacgum.png');
+        this.load.image('fantome2', 'assets/fantome2.png')
         this.load.image('powerup','assets/powerup.png');
 
+        this.load.image('boutoneasy','assets/easy.png');
+        this.load.image('boutonnormal','assets/normal.png');
+
         this.load.image('obstacle','assets/obstacle.png')
+        this.load.image('pacgumasset','assets/pacgum.png');
+        this.load.tilemapTiledJSON('carte', 'TILED/mapPacman.json');
     }
 
     create(){
@@ -51,35 +66,54 @@ class Level extends Phaser.Scene{
        right = this.input.keyboard.addKeys('D');
 
        // Création Sprites
-        player = this.physics.add.sprite(600,360,'pacman')
+        player = this.physics.add.sprite(260,380,'pacman')
         player.setOrigin(0.5,0.5)
         player.setCollideWorldBounds(true)
+        
+        pacgum = this.physics.add.sprite(260,280,'pacgumasset')
+
+        powerup = this.physics.add.sprite(860,360,'powerup')
 
         fantomeennemi1 = this.physics.add.sprite(700,360,'fantome')
         fantomeennemi1.setScale(2.4)
-        
-        pacgum = this.physics.add.sprite(300,360,'pacgum')
 
-        powerup = this.physics.add.sprite(900,360,'powerup')
+        fantomeennemi2 = this.physics.add.sprite(620,360,'fantome2')
+        fantomeennemi2.setScale(2.4)
+        fantomeennemi2.setVelocityY(-100)
 
         // Creation map
 
-        var map = this.make.tilemap({ key : 'map'});
-        var tiles = map.addTilesetImage('obstacle');
-        var layer = map.createLayer('ground', tiles, 0, 0)
+        const map = this.make.tilemap({key: 'carte'})
+        const obstacles = map.addTilesetImage('Obstacle','obstacle')
+        const levelPacman = map.createLayer('murs', obstacles, 0,0)
+        levelPacman.setCollisionByExclusion(-1, true);
+
+        // Ajout Bouton Difficulté
+
+        ennemycreated = false;
+        this.physics.pause()
+        buttoneasy = this.add.sprite(640,300,'boutoneasy').setInteractive({ cursor: 'pointer' })
+        buttonnormal = this.add.sprite(640,500,'boutonnormal').setInteractive({ cursor: 'pointer' })
 
         // Colliders
 
+        this.physics.add.collider(player, levelPacman);
+        this.physics.add.collider(fantomeennemi1, levelPacman);
+        this.physics.add.collider(fantomeennemi2, levelPacman);
         this.physics.add.collider(player, fantomeennemi1, hitEnnemi, null, this);
-        this.physics.add.collider(player, pacgum, hitPacgum, null, this);
+        this.physics.add.collider(player, fantomeennemi2, hitEnnemi, null, this);
+        this.physics.add.overlap(player, pacgum, hitPacgum, null, this);
         this.physics.add.collider(player, powerup, hitPowerup, null, this);
 
-
-        function hitEnnemi(player, fantomeennemi1){ 
-            if (powerupon = true){
-                fantomeennemi1.destroy()
+        touched = false
+        function hitEnnemi(player, fantomeennemi){ 
+            touched = true
+            if (powerupon == true){
+                console.log('Destruction')
+                fantomeennemi.destroy()
             }
             else{
+                console.log('GameOver')
                 this.physics.pause()
                 this.scene.restart()
             }
@@ -92,10 +126,44 @@ class Level extends Phaser.Scene{
         function hitPowerup(player, powerup){ 
             powerup.destroy()
             powerupon = true;
+            player.setTint(0xff0000);
         }
+
     }
 
     update(){
+
+        buttoneasy.on('pointerdown', function(){
+
+            if (ennemycreated == false){
+                this.physics.resume()
+                buttoneasy.destroy()
+                buttonnormal.destroy()
+
+                fantomeennemi2.destroy()
+
+                difficulty = 1
+                ennemycreated = true
+            }
+
+        }, this);
+
+        buttonnormal.on('pointerdown', function(){
+
+            if (ennemycreated == false){
+                this.physics.resume()
+                buttoneasy.destroy()
+                buttonnormal.destroy()
+
+                difficulty = 2
+                ennemycreated = true
+            }
+
+        }, this);
+
+
+
+
         if (right.D.isDown)
         {
             console.log('Test')
@@ -124,5 +192,49 @@ class Level extends Phaser.Scene{
             player.setVelocityY(200)
             player.setAngle(90)
         }
+        
+        if (touched == false && powerupon == false && difficulty != null){
+            this.physics.moveToObject(fantomeennemi1, player, 100);
+        }
+
+        if (difficulty == 2  && touched != true){
+            if (fantomeennemi2.body.blocked.up){
+                random = Phaser.Math.Between(0,1)
+                if (random == 0){
+                    fantomeennemi2.setVelocityX(-100)
+                }
+                else {
+                    fantomeennemi2.setVelocityX(100)
+                }
+            }
+            else if (fantomeennemi2.body.blocked.down){
+                random = Phaser.Math.Between(0,1)
+                if (random == 0){
+                    fantomeennemi2.setVelocityX(-100)
+                }
+                else {
+                    fantomeennemi2.setVelocityX(100)
+                }
+            }
+            else if (fantomeennemi2.body.blocked.right){
+                random = Phaser.Math.Between(0,1)
+                if (random == 0){
+                    fantomeennemi2.setVelocityY(-100)
+                }
+                else {
+                    fantomeennemi2.setVelocityY(100)
+                }
+            }
+            else if (fantomeennemi2.body.blocked.left){
+                random = Phaser.Math.Between(0,1)
+                if (random == 0){
+                    fantomeennemi2.setVelocityY(-100)
+                }
+                else {
+                    fantomeennemi2.setVelocityY(100)
+                } 
+            }       
+        }
     }
+    
 }
